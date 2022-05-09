@@ -1,0 +1,105 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+### How home and away locations affect the match results? 
+
+### Is team rating a crucial factor for deciding the results?  
+
+### Are teams giving more priority to the match when it’s a cup (“is_cup “field in historical columns)? 
+```{r}
+setwd("D:\\MSIM\\Semester 2\\Methods of DS\\Final Project\\IS517-FinalProject-EDA-data")
+df = read.csv('data.football.csv', na.strings=c("","NA"))
+```
+
+```{r}
+#factors = c('home_team_name', 'away_team_name','is_cup', 'home_team_history_is_play_home_1', 'home_team_history_is_play_home_2', 'home_team_history_is_play_home_3', 'home_team_history_is_play_home_4', 'home_team_history_is_play_home_5', 'away_team_history_is_play_home_1', 'away_team_history_is_play_home_2', 'away_team_history_is_play_home_3', 'away_team_history_is_play_home_4', 'away_team_history_is_play_home_5', 'home_team_history_goal_1', 'home_team_history_goal_2', 'home_team_history_goal_3', 'home_team_history_goal_4', 'home_team_history_goal_5',  )
+#data = df %>% select(all_of(factors))
+```
+
+
+```{r}
+library(tidyverse) 
+library(Hmisc)
+library(dplyr)
+```
+
+```{r}
+df_home_grp = df %>% group_by(home_team_name) %>% summarise(home_goal_1 = sum(home_team_history_goal_1), home_goal_2 = sum(home_team_history_goal_2), home_goal_3 = sum(home_team_history_goal_3), home_goal_4 = sum(home_team_history_goal_4), home_goal_5 = sum(home_team_history_goal_5), .groups = 'drop')
+
+#df_home_grp <- df_home_grp %>%
+    #mutate_if(is.factor, ~as.numeric(as.character(.)))
+
+df_home_grp$total_home_goals = rowSums(df_home_grp[2:6])
+
+df_home_grp
+```
+
+```{r}
+df_away_grp = df %>% group_by(away_team_name) %>% summarise(away_goal_1 = sum(away_team_history_goal_1), away_goal_2 = sum(away_team_history_goal_2), away_goal_3 = sum(away_team_history_goal_3), home_goal_4 = sum(away_team_history_goal_4), away_goal_5 = sum(away_team_history_goal_5), .groups = 'drop')
+
+#No_Low_No_Intergenic_snpeff.scores <- No_Low_No_Intergenic_snpeff.scores %>%
+    mutate_if(is.factor, ~as.numeric(as.character(.)))
+
+df_away_grp
+```
+
+```{r}
+library(RColorBrewer)
+coul <- brewer.pal(5, "Set2") 
+counts = table(df$target)
+b = barplot(counts, main="Home & Away Team Performances", xlab= "Target", ylab="Counts", col=coul)
+text(x=b, y=counts, labels=paste0(round(proportions(counts)*100, 2), "%"))
+```
+
+```{r}
+df_league_grp = df %>% group_by(league_name) %>% dplyr::summarise(league_count = n()) %>% arrange(desc(league_count))
+#df_league_grp = aggregate(df$league_id, by=list(df$league_name), FUN=length)
+
+df_league_grp
+```
+
+```{r}
+df_league_grp %>% 
+  arrange(desc(league_count)) %>%
+    slice(0:15) %>%
+    ggplot(., aes(x=league_name, y=league_count))+
+              geom_bar(stat='identity') + scale_x_discrete(guide = guide_axis(n.dodge=2))
+```
+```{r}
+df_cup_grp = df %>% group_by(is_cup) %>% dplyr::summarise(match_count = n()) %>% arrange(desc(match_count))
+
+df_cup_grp
+```
+
+```{r}
+df_cup_grp %>% 
+    ggplot(., aes(x=is_cup, y=match_count))+
+              geom_bar(stat='identity') + scale_x_discrete(guide = guide_axis(n.dodge=2))
+```
+```{r}
+df_home_cor = df[df$target == "home",]
+#tar = unclass(as.factor(df$target))
+#cor(tar, df$home_team_history_rating_1)#, method = c("pearson", "kendall", "spearman"))
+#cor.test(x, y, method=c("pearson", "kendall", "spearman"))
+cor(df_home_cor[, c('home_team_history_rating_1', 'home_team_history_rating_2', 'home_team_history_rating_3', 'home_team_history_rating_4', 'home_team_history_rating_5')])
+cor(df_home_cor[, c('away_team_history_rating_1', 'away_team_history_rating_2', 'away_team_history_rating_3', 'away_team_history_rating_4', 'away_team_history_rating_5')])
+```
+```{r}
+df_away_cor = df[df$target == "away",]
+#tar = unclass(as.factor(df$target))
+#cor(tar, df$home_team_history_rating_1)#, method = c("pearson", "kendall", "spearman"))
+#cor.test(x, y, method=c("pearson", "kendall", "spearman"))
+cor(df_away_cor[, c('away_team_history_rating_1', 'away_team_history_rating_2', 'away_team_history_rating_3', 'away_team_history_rating_4', 'away_team_history_rating_5', 'home_team_history_rating_1', 'home_team_history_rating_2', 'home_team_history_rating_3', 'home_team_history_rating_4', 'home_team_history_rating_5')])
+#cor(df_away_cor[, c('home_team_history_rating_1', 'home_team_history_rating_2', 'home_team_history_rating_3', 'home_team_history_rating_4', 'home_team_history_rating_5')])
+```
+```{r}
+library(psych)
+num_data = select_if(df, is.numeric)
+grid <- par(mfrow=c(4, 5))
+pairs.panels(num_data)
+par(grid)
+
+```
+
